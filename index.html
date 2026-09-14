@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Times Quest">
+  <title>Times Table Quest</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app" aria-live="polite">
+    <section class="screen screen-home active" id="homeScreen">
+      <div class="topbar">
+        <div>
+          <p class="eyebrow">Times Table Quest</p>
+          <h1>Beat the Clock</h1>
+        </div>
+        <button class="icon-button" id="soundButton" type="button" aria-label="Toggle sound">Sound On</button>
+      </div>
+
+      <div class="hero">
+        <div class="avatar-ring">
+          <div class="hero-avatar" id="homeAvatar">A</div>
+        </div>
+        <div class="hero-copy">
+          <p class="big-stat"><span id="homeStars">0</span> stars</p>
+          <p class="subtle">Answer fast. Keep your combo. Unlock new heroes.</p>
+        </div>
+      </div>
+
+      <div class="mission-strip">
+        <span class="mission-icon">Daily</span>
+        <div>
+          <strong id="missionTitle">Daily Mission</strong>
+          <p id="missionText">Win 20 stars today.</p>
+        </div>
+        <span class="mission-progress" id="missionProgress">0/20</span>
+      </div>
+
+      <div class="mode-grid">
+        <button class="mode-card primary" data-mode="speed" type="button">
+          <span>Speed Challenge</span>
+          <small>10 questions, 5 seconds each</small>
+        </button>
+        <button class="mode-card" data-mode="practice" type="button">
+          <span>Practice Mode</span>
+          <small>No pressure, memory help ready</small>
+        </button>
+        <button class="mode-card" data-mode="review" type="button">
+          <span>Review Mistakes</span>
+          <small id="reviewCount">No mistakes yet</small>
+        </button>
+      </div>
+
+      <div class="settings">
+        <p class="section-label">Question Set</p>
+        <div class="segmented" role="group" aria-label="Question set">
+          <button class="segment active" data-set="mixed" type="button">Mixed</button>
+          <button class="segment" data-set="three" type="button">3x</button>
+          <button class="segment" data-set="four" type="button">4x</button>
+        </div>
+      </div>
+
+      <div class="unlock-row" id="unlockRow"></div>
+    </section>
+
+    <section class="screen screen-game" id="gameScreen">
+      <div class="game-top">
+        <button class="text-button" id="exitButton" type="button">Exit</button>
+        <div class="round-info">
+          <span id="roundCounter">1 / 10</span>
+          <strong id="comboText">Combo x0</strong>
+        </div>
+        <div class="stars-pill">Stars <span id="roundStars">0</span></div>
+      </div>
+
+      <div class="timer-wrap">
+        <div class="timer-bar" id="timerBar"></div>
+      </div>
+
+      <div class="arena" id="arena">
+        <div class="feedback-pop" id="feedbackPop"></div>
+        <div class="target" id="targetAvatar">A</div>
+        <p class="prompt-label" id="promptLabel">Choose the answer!</p>
+        <h2 id="questionText">3 x 7 = ?</h2>
+      </div>
+
+      <div class="answers" id="answers"></div>
+
+      <div class="memory-card" id="memoryCard" hidden>
+        <p class="memory-title" id="memoryTitle">Remember</p>
+        <p class="memory-fact" id="memoryFact">3 x 7 = 21</p>
+        <p class="memory-story" id="memoryStory">Three rockets fly to Planet 21.</p>
+        <button class="continue-button" id="continueButton" type="button">Try Again</button>
+      </div>
+    </section>
+
+    <section class="screen screen-results" id="resultsScreen">
+      <div class="result-medal" id="resultMedal">S</div>
+      <p class="eyebrow">Round Complete</p>
+      <h2 id="resultTitle">Great run!</h2>
+      <div class="result-grid">
+        <div>
+          <span id="resultScore">0 / 10</span>
+          <small>Score</small>
+        </div>
+        <div>
+          <span id="resultStars">0</span>
+          <small>Stars</small>
+        </div>
+        <div>
+          <span id="resultCombo">0</span>
+          <small>Best Combo</small>
+        </div>
+      </div>
+      <p class="subtle" id="resultMessage">Keep going.</p>
+      <div class="result-actions">
+        <button class="mode-card primary" id="playAgainButton" type="button">
+          <span>Play Again</span>
+          <small>One more quick round</small>
+        </button>
+        <button class="mode-card" id="homeButton" type="button">
+          <span>Home</span>
+          <small>Change mode or question set</small>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
