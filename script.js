@@ -75,6 +75,15 @@
     homeStars: document.getElementById("homeStars"),
     homeAccuracy: document.getElementById("homeAccuracy"),
     homeStreak: document.getElementById("homeStreak"),
+    nightText: document.getElementById("nightText"),
+    fireText: document.getElementById("fireText"),
+    campHeartsText: document.getElementById("campHeartsText"),
+    woodText: document.getElementById("woodText"),
+    foodText: document.getElementById("foodText"),
+    cardCountText: document.getElementById("cardCountText"),
+    homeFireBar: document.getElementById("homeFireBar"),
+    campScene: document.getElementById("campScene"),
+    campfire: document.getElementById("campfire"),
     missionProgress: document.getElementById("missionProgress"),
     reviewCount: document.getElementById("reviewCount"),
     unlockRow: document.getElementById("unlockRow"),
@@ -216,7 +225,13 @@
       bossCards: {},
       bestCombo: 0,
       petLevel: 1,
-      petSparkle: 0
+      petSparkle: 0,
+      night: 1,
+      fire: 60,
+      campHearts: 3,
+      wood: 3,
+      food: 1,
+      campLevel: 1
     };
 
     try {
@@ -251,15 +266,29 @@
 
   function renderHome() {
     var summary = buildSummary();
+    currentWorld = Math.min(3, Math.floor(((state.night || 1) - 1) / 3));
+    state.selectedWorld = currentWorld;
+    if (worlds[currentWorld] && worlds[currentWorld].set !== "weak") {
+      currentSet = worlds[currentWorld].set;
+      state.selectedSet = currentSet;
+    }
     els.homeStars.textContent = state.stars;
     els.soundButton.textContent = state.sound ? "Sound On" : "Sound Off";
     els.homeAccuracy.textContent = summary.total ? "Accuracy " + Math.round(summary.accuracy * 100) + "%" : "Accuracy --";
     els.homeStreak.textContent = "Best combo " + (state.bestCombo || 0);
-    els.missionProgress.textContent = Math.min(state.dailyStars, 20) + "/20";
-    els.petStatus.textContent = "Pet level " + (state.petLevel || 1) + " | Room sparkle " + (state.petSparkle || 0);
+    els.nightText.textContent = state.night || 1;
+    els.fireText.textContent = Math.round(state.fire || 0) + "%";
+    els.campHeartsText.textContent = state.campHearts || 3;
+    els.woodText.textContent = state.wood || 0;
+    els.foodText.textContent = state.food || 0;
+    els.cardCountText.textContent = Object.keys(state.bossCards || {}).filter(function (key) { return state.bossCards[key]; }).length;
+    els.missionProgress.textContent = "Night " + (state.night || 1);
+    els.petStatus.textContent = "Pet level " + (state.petLevel || 1) + " | Camp level " + (state.campLevel || 1);
+    els.homeFireBar.style.transform = "scaleX(" + Math.max(0.06, Math.min(1, (state.fire || 0) / 100)).toFixed(3) + ")";
+    els.campScene.classList.toggle("low-fire", (state.fire || 0) < 35);
     els.roomPet.classList.toggle("sparkly", (state.petSparkle || 0) > 0);
-    els.feedPetButton.disabled = state.stars < 5;
-    els.sparkleRoomButton.disabled = state.stars < 8;
+    els.feedPetButton.disabled = (state.food || 0) < 1;
+    els.sparkleRoomButton.disabled = (state.wood || 0) < 5 || state.stars < 6;
 
     document.querySelectorAll("[data-set]").forEach(function (button) {
       button.classList.toggle("active", button.dataset.set === currentSet);
@@ -274,7 +303,7 @@
     });
 
     var weakFacts = getWeakFacts(5);
-    els.reviewCount.textContent = weakFacts.length ? weakFacts.length + " weak facts ready" : "No weak facts yet";
+    els.reviewCount.textContent = weakFacts.length || 0;
 
     els.unlockRow.innerHTML = "";
     gear.forEach(function (item) {
@@ -312,10 +341,12 @@
     var isBattle = mode === "battle";
     var isMemory = mode === "memory";
     var world = worlds[currentWorld] || worlds[0];
+    var battleQuestions = Math.min(5, 3 + Math.floor(((state.night || 1) - 1) / 2));
+    var nightHp = isBattle ? Math.min(8, battleQuestions + Math.floor((state.night || 1) / 4)) : 0;
     round = {
       mode: mode,
       world: world,
-      queue: buildQueue(pool, isBattle ? 5 : isMemory ? 6 : 10),
+      queue: buildQueue(pool, isBattle ? battleQuestions : isMemory ? 6 : 10),
       index: 0,
       correct: 0,
       stars: 0,
@@ -323,8 +354,8 @@
       bestCombo: 0,
       hearts: isBattle ? 3 : 99,
       maxHearts: isBattle ? 3 : 99,
-      bossHp: isBattle ? world.hp : 0,
-      bossMaxHp: isBattle ? world.hp : 0,
+      bossHp: isBattle ? nightHp : 0,
+      bossMaxHp: isBattle ? nightHp : 0,
       revenge: [],
       currentFact: null,
       locked: false,
@@ -339,6 +370,10 @@
     els.memoryCard.hidden = true;
     els.battleHud.hidden = !isBattle;
     showScreen("game");
+    if (isBattle) {
+      state.fire = Math.min(100, (state.fire || 0) + Math.min(20, (state.wood || 0) * 4));
+      saveState();
+    }
     if (isMemory) {
       startMemoryFlip();
       return;
@@ -612,6 +647,7 @@
 
     if (round.mode === "battle") {
       round.bossHp = Math.max(0, round.bossHp - damage);
+      state.fire = Math.min(100, (state.fire || 0) + 7 + (round.combo >= 3 ? 4 : 0));
       animateAttack();
     }
 
@@ -642,6 +678,8 @@
 
     if (round.mode === "battle") {
       round.hearts = Math.max(0, round.hearts - 1);
+      state.fire = Math.max(0, (state.fire || 0) - 18);
+      state.campHearts = round.hearts;
       animateBossHit();
     }
 
@@ -669,6 +707,8 @@
       round.revenge.push(factKey(fact));
       if (round.mode === "battle") {
         round.hearts = Math.max(0, round.hearts - 1);
+        state.fire = Math.max(0, (state.fire || 0) - 16);
+        state.campHearts = round.hearts;
         animateBossHit();
       }
       saveState();
@@ -710,11 +750,23 @@
     clearTimer();
     var wonBattle = round.mode === "battle" && round.bossHp <= 0;
     if (round.mode === "memory") {
+      state.wood = (state.wood || 0) + 4 + Math.max(0, round.correct - 4);
+      state.food = (state.food || 0) + (round.correct >= 4 ? 1 : 0);
+      state.fire = Math.min(100, (state.fire || 0) + 10);
+      saveState();
       playSound("victory");
     } else if (wonBattle) {
       state.bossCards[round.world.reward] = true;
+      state.night = (state.night || 1) + 1;
+      state.campHearts = 3;
+      state.fire = Math.max(34, (state.fire || 0) - 22);
+      state.wood = Math.max(0, (state.wood || 0) - 2);
       saveState();
       playSound("victory");
+    } else if (round.mode === "battle") {
+      state.fire = Math.max(18, state.fire || 0);
+      state.campHearts = Math.max(1, round.hearts);
+      saveState();
     }
     showScreen("results");
 
@@ -723,13 +775,13 @@
     els.resultCombo.textContent = round.bestCombo;
 
     if (round.mode === "memory") {
-      els.resultTitle.textContent = "Room puzzle cleared!";
-      els.resultMessage.textContent = "Matched every pair and earned pet stars.";
+      els.resultTitle.textContent = "Wood gathered!";
+      els.resultMessage.textContent = "Backpack gained wood and food for tonight.";
       els.resultMedal.textContent = "M";
     } else if (wonBattle) {
-      els.resultTitle.textContent = "Boss defeated!";
-      els.resultMessage.textContent = "You won " + round.world.reward + ".";
-      els.resultMedal.textContent = "B";
+      els.resultTitle.textContent = "Night survived!";
+      els.resultMessage.textContent = "The camp is safe. Night " + (state.night || 1) + " is unlocked.";
+      els.resultMedal.textContent = "N";
     } else if (round.mode === "battle" && round.hearts <= 0) {
       els.resultTitle.textContent = "Battle lost";
       els.resultMessage.textContent = "Review the hint facts, then try again.";
@@ -854,15 +906,21 @@
   }
 
   function spendStarsForPet(cost, type) {
-    if (state.stars < cost) return;
-    state.stars -= cost;
     if (type === "feed") {
+      if ((state.food || 0) < 1) return;
+      state.food -= 1;
       state.petLevel = (state.petLevel || 1) + 1;
+      state.fire = Math.min(100, (state.fire || 0) + 8);
       showFeedback("Pet level up!");
       playSound("combo");
     } else {
+      if ((state.wood || 0) < 5 || state.stars < 6) return;
+      state.wood -= 5;
+      state.stars -= 6;
       state.petSparkle = (state.petSparkle || 0) + 1;
-      showFeedback("Room sparkle!");
+      state.campLevel = (state.campLevel || 1) + 1;
+      state.fire = Math.min(100, (state.fire || 0) + 14);
+      showFeedback("Camp upgraded!");
       playSound("victory");
     }
     saveState();
