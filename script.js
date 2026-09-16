@@ -2,6 +2,14 @@
   "use strict";
 
   var facts = [
+    { a: 2, b: 2, answer: 4, story: "Two jump ropes make four quick skips." },
+    { a: 2, b: 3, answer: 6, story: "Two scooters race past Gate 6." },
+    { a: 2, b: 4, answer: 8, story: "Two twins build eight bright blocks." },
+    { a: 2, b: 5, answer: 10, story: "Two high-fives make ten happy fingers." },
+    { a: 2, b: 6, answer: 12, story: "Two treasure maps point to Chest 12." },
+    { a: 2, b: 7, answer: 14, story: "Two dancers spin onto Stage 14." },
+    { a: 2, b: 8, answer: 16, story: "Two robot teams charge to Level 16." },
+    { a: 2, b: 9, answer: 18, story: "Two rockets land at Star 18." },
     { a: 3, b: 3, answer: 9, story: "Three treasure doors open to Room 9." },
     { a: 3, b: 4, answer: 12, story: "Three race cars zoom to Gate 12." },
     { a: 3, b: 6, answer: 18, story: "Three rockets blast toward Star 18." },
@@ -13,7 +21,23 @@
     { a: 4, b: 6, answer: 24, story: "Four pizza plates spin toward Table 24." },
     { a: 4, b: 7, answer: 28, story: "Four trains race into Station 28." },
     { a: 4, b: 8, answer: 32, story: "Four game teams jump to Level 32." },
-    { a: 4, b: 9, answer: 36, story: "Four bright spotlights shine on Stage 36." }
+    { a: 4, b: 9, answer: 36, story: "Four bright spotlights shine on Stage 36." },
+    { a: 5, b: 2, answer: 10, story: "Five pairs of shoes step to Door 10." },
+    { a: 5, b: 3, answer: 15, story: "Five starfish wave from Rock 15." },
+    { a: 5, b: 4, answer: 20, story: "Five music bands play Beat 20." },
+    { a: 5, b: 5, answer: 25, story: "Five golden keys unlock Room 25." },
+    { a: 5, b: 6, answer: 30, story: "Five snack boxes fill Shelf 30." },
+    { a: 5, b: 7, answer: 35, story: "Five rainbow steps climb to Cloud 35." },
+    { a: 5, b: 8, answer: 40, story: "Five race teams speed to Lap 40." },
+    { a: 5, b: 9, answer: 45, story: "Five spotlights shine on Stage 45." },
+    { a: 10, b: 2, answer: 20, story: "Ten coins drop into Jar 20." },
+    { a: 10, b: 3, answer: 30, story: "Ten drum beats echo to Beat 30." },
+    { a: 10, b: 4, answer: 40, story: "Ten balloons float to Sky 40." },
+    { a: 10, b: 5, answer: 50, story: "Ten racers dash to Flag 50." },
+    { a: 10, b: 6, answer: 60, story: "Ten fireworks sparkle at Star 60." },
+    { a: 10, b: 7, answer: 70, story: "Ten treasure carts roll to Cave 70." },
+    { a: 10, b: 8, answer: 80, story: "Ten heroes charge to Level 80." },
+    { a: 10, b: 9, answer: 90, story: "Ten magic lifts stop at Floor 90." }
   ];
 
   var avatars = [
@@ -54,6 +78,9 @@
     promptLabel: document.getElementById("promptLabel"),
     questionText: document.getElementById("questionText"),
     answers: document.getElementById("answers"),
+    practicePanel: document.getElementById("practicePanel"),
+    practiceStatus: document.getElementById("practiceStatus"),
+    checkButton: document.getElementById("checkButton"),
     feedbackPop: document.getElementById("feedbackPop"),
     memoryCard: document.getElementById("memoryCard"),
     memoryTitle: document.getElementById("memoryTitle"),
@@ -101,6 +128,10 @@
   els.continueButton.addEventListener("click", function () {
     els.memoryCard.hidden = true;
     askQuestion(round.currentFact, true);
+  });
+
+  els.checkButton.addEventListener("click", function () {
+    checkPracticeAnswer();
   });
 
   els.playAgainButton.addEventListener("click", function () {
@@ -206,7 +237,10 @@
       bestCombo: 0,
       revenge: [],
       currentFact: null,
-      locked: false
+      locked: false,
+      selectedOption: null,
+      selectedButton: null,
+      practiceSwitches: 0
     };
 
     els.memoryCard.hidden = true;
@@ -224,6 +258,7 @@
     }
 
     return facts.filter(function (fact) {
+      if (currentSet === "starter") return fact.a === 2 || fact.a === 5 || fact.a === 10;
       if (currentSet === "three") return fact.a === 3;
       if (currentSet === "four") return fact.a === 4;
       return true;
@@ -252,6 +287,8 @@
     clearTimer();
     round.locked = false;
     round.currentFact = fact;
+    round.selectedOption = null;
+    round.selectedButton = null;
 
     var avatar = getAvatar();
     els.targetAvatar.textContent = avatar.letter;
@@ -259,9 +296,12 @@
     els.roundCounter.textContent = Math.min(round.index + 1, round.queue.length) + " / " + round.queue.length;
     els.comboText.textContent = "Combo x" + round.combo;
     els.roundStars.textContent = round.stars;
-    els.promptLabel.textContent = retry ? "Try again!" : "Choose the answer!";
+    els.promptLabel.textContent = getPromptLabel(retry);
     els.questionText.textContent = fact.a + " x " + fact.b + " = ?";
     els.answers.innerHTML = "";
+    els.practicePanel.hidden = round.mode !== "practice";
+    els.checkButton.disabled = true;
+    els.practiceStatus.textContent = "Choose one answer first.";
 
     makeOptions(fact.answer).forEach(function (option) {
       var button = document.createElement("button");
@@ -286,8 +326,63 @@
 
   function chooseAnswer(option, button) {
     if (round.locked) return;
+    if (round.mode === "practice") {
+      selectPracticeAnswer(option, button);
+      return;
+    }
+
+    handleAnswer(option, button);
+  }
+
+  function selectPracticeAnswer(option, button) {
+    if (round.selectedButton && round.selectedButton !== button) {
+      round.practiceSwitches += 1;
+    }
+
+    document.querySelectorAll(".answer-button").forEach(function (item) {
+      item.classList.toggle("selected", item === button);
+    });
+
+    round.selectedOption = option;
+    round.selectedButton = button;
+    els.checkButton.disabled = false;
+    els.practiceStatus.textContent = "You chose " + option + ". Press Check when you are sure.";
+
+    if (round.practiceSwitches >= 3) {
+      slowPracticeTapping();
+    }
+  }
+
+  function slowPracticeTapping() {
+    round.locked = true;
+    round.practiceSwitches = 0;
+    round.selectedOption = null;
+    round.selectedButton = null;
+    els.checkButton.disabled = true;
+    els.practiceStatus.textContent = "Pause and think first. The answers moved!";
+    showFeedback("Think first");
+
+    var buttons = Array.prototype.slice.call(els.answers.children);
+    shuffle(buttons).forEach(function (button) {
+      button.classList.remove("selected");
+      els.answers.appendChild(button);
+    });
+
+    setTimeout(function () {
+      round.locked = false;
+      els.practiceStatus.textContent = "Choose one answer first.";
+    }, 900);
+  }
+
+  function checkPracticeAnswer() {
+    if (round.locked || round.selectedOption === null || !round.selectedButton) return;
+    handleAnswer(round.selectedOption, round.selectedButton);
+  }
+
+  function handleAnswer(option, button) {
     round.locked = true;
     clearTimer();
+    els.checkButton.disabled = true;
 
     var fact = round.currentFact;
     var correct = option === fact.answer;
@@ -299,7 +394,7 @@
       round.combo += 1;
       round.bestCombo = Math.max(round.bestCombo, round.combo);
 
-      var earned = round.mode === "practice" ? 1 : elapsed <= 5 ? 2 : 1;
+      var earned = round.mode === "practice" ? 1 : elapsed <= getTimeLimit() ? 2 : 1;
       if (round.revenge.indexOf(factKey(fact)) !== -1) earned += 1;
       round.stars += earned;
       state.stars += earned;
@@ -330,8 +425,9 @@
 
   function tickTimer() {
     var elapsed = (performance.now() - questionStartedAt) / 1000;
-    var remaining = Math.max(0, 5 - elapsed);
-    els.timerBar.style.transform = "scaleX(" + (remaining / 5).toFixed(3) + ")";
+    var limit = getTimeLimit();
+    var remaining = Math.max(0, limit - elapsed);
+    els.timerBar.style.transform = "scaleX(" + (remaining / limit).toFixed(3) + ")";
 
     if (remaining <= 0) {
       clearTimer();
@@ -353,6 +449,20 @@
     els.memoryFact.textContent = fact.a + " x " + fact.b + " = " + fact.answer;
     els.memoryStory.textContent = fact.story;
     els.memoryCard.hidden = false;
+  }
+
+  function getPromptLabel(retry) {
+    if (round.mode === "practice") return retry ? "Try again, then Check!" : "Choose carefully, then Check!";
+    if (round.combo >= 5) return "Boss speed: 3 seconds!";
+    if (round.combo >= 3) return "Challenge speed: 4 seconds!";
+    return retry ? "Try again!" : "Choose the answer!";
+  }
+
+  function getTimeLimit() {
+    if (!round || round.mode !== "speed") return 5;
+    if (round.combo >= 5) return 3;
+    if (round.combo >= 3) return 4;
+    return 5;
   }
 
   function finishRound() {

@@ -41,11 +41,11 @@
       <div class="mode-grid">
         <button class="mode-card primary" data-mode="speed" type="button">
           <span>Speed Challenge</span>
-          <small>10 questions, 5 seconds each</small>
+          <small>10 questions, faster after combo x3</small>
         </button>
         <button class="mode-card" data-mode="practice" type="button">
           <span>Practice Mode</span>
-          <small>No pressure, memory help ready</small>
+          <small>Choose first, then press Check</small>
         </button>
         <button class="mode-card" data-mode="review" type="button">
           <span>Review Mistakes</span>
@@ -57,6 +57,7 @@
         <p class="section-label">Question Set</p>
         <div class="segmented" role="group" aria-label="Question set">
           <button class="segment active" data-set="mixed" type="button">Mixed</button>
+          <button class="segment" data-set="starter" type="button">2/5/10</button>
           <button class="segment" data-set="three" type="button">3x</button>
           <button class="segment" data-set="four" type="button">4x</button>
         </div>
@@ -87,6 +88,11 @@
       </div>
 
       <div class="answers" id="answers"></div>
+
+      <div class="practice-panel" id="practicePanel" hidden>
+        <p id="practiceStatus">Choose one answer first.</p>
+        <button class="check-button" id="checkButton" type="button" disabled>Check</button>
+      </div>
 
       <div class="memory-card" id="memoryCard" hidden>
         <p class="memory-title" id="memoryTitle">Remember</p>
