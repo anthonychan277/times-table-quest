@@ -48,6 +48,27 @@
         <span class="mission-progress" id="missionProgress">0/20</span>
       </section>
 
+      <section class="room-panel" aria-label="Pet room">
+        <div class="room-scene">
+          <div class="room-window"></div>
+          <div class="room-pet" id="roomPet">
+            <span></span>
+          </div>
+          <div class="room-shelf">
+            <i></i><i></i><i></i>
+          </div>
+        </div>
+        <div class="room-copy">
+          <p class="section-label">Kuromi Room</p>
+          <h2>Take care of your helper</h2>
+          <p class="subtle" id="petStatus">Win stars, feed the pet, and unlock room sparkle.</p>
+          <div class="room-actions">
+            <button class="check-button" id="feedPetButton" type="button">Feed - 5 stars</button>
+            <button class="check-button ghost" id="sparkleRoomButton" type="button">Sparkle - 8 stars</button>
+          </div>
+        </div>
+      </section>
+
       <section class="world-map" aria-label="World map">
         <button class="map-node active" data-world="0" type="button">
           <span>1</span>
@@ -73,8 +94,12 @@
 
       <section class="mode-grid">
         <button class="mode-card primary" data-mode="battle" type="button">
-          <span>Battle</span>
-          <small>Boss HP, hearts, combo attack</small>
+          <span>Short Battle</span>
+          <small>5 quick hits, boss HP, combo attack</small>
+        </button>
+        <button class="mode-card" data-mode="memory" type="button">
+          <span>Memory Flip</span>
+          <small>Match the question card to the answer card</small>
         </button>
         <button class="mode-card" data-mode="practice" type="button">
           <span>Practice</span>
@@ -157,6 +182,8 @@
       </div>
 
       <div class="answers" id="answers"></div>
+
+      <div class="memory-board" id="memoryBoard" hidden></div>
 
       <div class="practice-panel" id="practicePanel" hidden>
         <p id="practiceStatus">Choose one answer first.</p>

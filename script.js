@@ -94,6 +94,7 @@
     promptLabel: document.getElementById("promptLabel"),
     questionText: document.getElementById("questionText"),
     answers: document.getElementById("answers"),
+    memoryBoard: document.getElementById("memoryBoard"),
     practicePanel: document.getElementById("practicePanel"),
     practiceStatus: document.getElementById("practiceStatus"),
     checkButton: document.getElementById("checkButton"),
@@ -118,7 +119,11 @@
     reportSpeed: document.getElementById("reportSpeed"),
     strongList: document.getElementById("strongList"),
     weakList: document.getElementById("weakList"),
-    suggestionText: document.getElementById("suggestionText")
+    suggestionText: document.getElementById("suggestionText"),
+    feedPetButton: document.getElementById("feedPetButton"),
+    sparkleRoomButton: document.getElementById("sparkleRoomButton"),
+    petStatus: document.getElementById("petStatus"),
+    roomPet: document.getElementById("roomPet")
   };
 
   document.querySelectorAll("[data-mode]").forEach(function (button) {
@@ -187,6 +192,14 @@
     renderHome();
   });
 
+  els.feedPetButton.addEventListener("click", function () {
+    spendStarsForPet(5, "feed");
+  });
+
+  els.sparkleRoomButton.addEventListener("click", function () {
+    spendStarsForPet(8, "sparkle");
+  });
+
   renderHome();
 
   function loadState() {
@@ -201,7 +214,9 @@
       selectedSet: "starter",
       selectedWorld: 0,
       bossCards: {},
-      bestCombo: 0
+      bestCombo: 0,
+      petLevel: 1,
+      petSparkle: 0
     };
 
     try {
@@ -241,6 +256,10 @@
     els.homeAccuracy.textContent = summary.total ? "Accuracy " + Math.round(summary.accuracy * 100) + "%" : "Accuracy --";
     els.homeStreak.textContent = "Best combo " + (state.bestCombo || 0);
     els.missionProgress.textContent = Math.min(state.dailyStars, 20) + "/20";
+    els.petStatus.textContent = "Pet level " + (state.petLevel || 1) + " | Room sparkle " + (state.petSparkle || 0);
+    els.roomPet.classList.toggle("sparkly", (state.petSparkle || 0) > 0);
+    els.feedPetButton.disabled = state.stars < 5;
+    els.sparkleRoomButton.disabled = state.stars < 8;
 
     document.querySelectorAll("[data-set]").forEach(function (button) {
       button.classList.toggle("active", button.dataset.set === currentSet);
@@ -291,11 +310,12 @@
     }
 
     var isBattle = mode === "battle";
+    var isMemory = mode === "memory";
     var world = worlds[currentWorld] || worlds[0];
     round = {
       mode: mode,
       world: world,
-      queue: buildQueue(pool, isBattle ? 8 : 10),
+      queue: buildQueue(pool, isBattle ? 5 : isMemory ? 6 : 10),
       index: 0,
       correct: 0,
       stars: 0,
@@ -310,12 +330,19 @@
       locked: false,
       selectedOption: null,
       selectedButton: null,
-      practiceSwitches: 0
+      practiceSwitches: 0,
+      memoryOpen: [],
+      memoryMatched: 0,
+      memoryMoves: 0
     };
 
     els.memoryCard.hidden = true;
     els.battleHud.hidden = !isBattle;
     showScreen("game");
+    if (isMemory) {
+      startMemoryFlip();
+      return;
+    }
     askNext();
   }
 
@@ -374,6 +401,11 @@
     els.promptLabel.textContent = getPromptLabel(retry);
     els.questionText.textContent = fact.a + " x " + fact.b + " = ?";
     els.answers.innerHTML = "";
+    els.memoryBoard.hidden = true;
+    els.memoryBoard.innerHTML = "";
+    els.arena.hidden = false;
+    els.answers.hidden = false;
+    document.querySelector(".timer-wrap").hidden = false;
     els.practicePanel.hidden = round.mode !== "practice";
     els.checkButton.disabled = true;
     els.practiceStatus.textContent = "Choose one answer first.";
@@ -400,6 +432,102 @@
 
     tickTimer();
     timerId = window.setInterval(tickTimer, 60);
+  }
+
+  function startMemoryFlip() {
+    clearTimer();
+    els.memoryCard.hidden = true;
+    els.battleHud.hidden = true;
+    els.practicePanel.hidden = true;
+    els.answers.hidden = true;
+    els.arena.hidden = false;
+    els.memoryBoard.hidden = false;
+    document.querySelector(".timer-wrap").hidden = true;
+    els.roundCounter.textContent = "0 / " + round.queue.length;
+    els.comboText.textContent = "Moves 0";
+    els.roundStars.textContent = round.stars;
+    els.promptLabel.textContent = "Find the matching pair!";
+    els.questionText.textContent = "Memory Flip";
+    els.memoryBoard.innerHTML = "";
+
+    var cards = [];
+    round.queue.forEach(function (fact, index) {
+      cards.push({ pair: index, type: "question", fact: fact, text: fact.a + " x " + fact.b });
+      cards.push({ pair: index, type: "answer", fact: fact, text: String(fact.answer) });
+    });
+
+    shuffle(cards).forEach(function (card) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "flip-card";
+      button.dataset.pair = card.pair;
+      button.dataset.type = card.type;
+      button.innerHTML = "<span class=\"card-back\">?</span><span class=\"card-front\">" + card.text + "</span>";
+      button.addEventListener("click", function () {
+        flipMemoryCard(button, card);
+      });
+      els.memoryBoard.appendChild(button);
+    });
+
+    playSound("select");
+  }
+
+  function flipMemoryCard(button, card) {
+    if (round.locked || button.classList.contains("open") || button.classList.contains("matched")) return;
+    button.classList.add("open");
+    round.memoryOpen.push({ button: button, card: card });
+    playSound("select");
+
+    if (round.memoryOpen.length < 2) return;
+
+    round.locked = true;
+    round.memoryMoves += 1;
+    els.comboText.textContent = "Moves " + round.memoryMoves;
+    var first = round.memoryOpen[0];
+    var second = round.memoryOpen[1];
+    var matched = first.card.pair === second.card.pair && first.card.type !== second.card.type;
+
+    if (matched) {
+      first.button.classList.add("matched");
+      second.button.classList.add("matched");
+      round.memoryMatched += 1;
+      round.correct += 1;
+      round.combo += 1;
+      round.bestCombo = Math.max(round.bestCombo, round.combo);
+      state.bestCombo = Math.max(state.bestCombo || 0, round.bestCombo);
+      var bonus = round.combo >= 3 ? 3 : 2;
+      round.stars += bonus;
+      state.stars += bonus;
+      state.dailyStars += bonus;
+      state.mistakes[factKey(card.fact)] = Math.max(0, (state.mistakes[factKey(card.fact)] || 0) - 1);
+      recordAttempt(card.fact, true, Math.max(0.2, round.memoryMoves), "memory");
+      saveState();
+      els.roundCounter.textContent = round.memoryMatched + " / " + round.queue.length;
+      els.roundStars.textContent = round.stars;
+      showFeedback(round.combo >= 3 ? "Match combo!" : "Matched!");
+      playSound(round.combo >= 3 ? "combo" : "correct");
+      round.memoryOpen = [];
+      round.locked = false;
+      if (round.memoryMatched >= round.queue.length) {
+        setTimeout(finishRound, 650);
+      }
+      return;
+    }
+
+    round.combo = 0;
+    var missedFact = first.card.type === "question" ? first.card.fact : second.card.fact;
+    recordAttempt(missedFact, false, Math.max(0.2, round.memoryMoves), "memory");
+    state.mistakes[factKey(missedFact)] = (state.mistakes[factKey(missedFact)] || 0) + 1;
+    saveState();
+    showFeedback("Try another pair");
+    playSound("wrong");
+
+    setTimeout(function () {
+      first.button.classList.remove("open");
+      second.button.classList.remove("open");
+      round.memoryOpen = [];
+      round.locked = false;
+    }, 760);
   }
 
   function chooseAnswer(option, button) {
@@ -581,7 +709,9 @@
   function finishRound() {
     clearTimer();
     var wonBattle = round.mode === "battle" && round.bossHp <= 0;
-    if (wonBattle) {
+    if (round.mode === "memory") {
+      playSound("victory");
+    } else if (wonBattle) {
       state.bossCards[round.world.reward] = true;
       saveState();
       playSound("victory");
@@ -592,7 +722,11 @@
     els.resultStars.textContent = round.stars;
     els.resultCombo.textContent = round.bestCombo;
 
-    if (wonBattle) {
+    if (round.mode === "memory") {
+      els.resultTitle.textContent = "Room puzzle cleared!";
+      els.resultMessage.textContent = "Matched every pair and earned pet stars.";
+      els.resultMedal.textContent = "M";
+    } else if (wonBattle) {
       els.resultTitle.textContent = "Boss defeated!";
       els.resultMessage.textContent = "You won " + round.world.reward + ".";
       els.resultMedal.textContent = "B";
@@ -715,8 +849,24 @@
     } else if (summary.total < 10) {
       els.suggestionText.textContent = "Next: play one Pink Forest battle to collect more data.";
     } else {
-      els.suggestionText.textContent = "Next: try Purple Castle or Star Cave for a bigger challenge.";
+      els.suggestionText.textContent = "Next: play Memory Flip first, then one short battle.";
     }
+  }
+
+  function spendStarsForPet(cost, type) {
+    if (state.stars < cost) return;
+    state.stars -= cost;
+    if (type === "feed") {
+      state.petLevel = (state.petLevel || 1) + 1;
+      showFeedback("Pet level up!");
+      playSound("combo");
+    } else {
+      state.petSparkle = (state.petSparkle || 0) + 1;
+      showFeedback("Room sparkle!");
+      playSound("victory");
+    }
+    saveState();
+    renderHome();
   }
 
   function renderFactList(container, items, emptyText) {
